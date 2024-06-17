@@ -32,6 +32,12 @@ enum cursorKeys {
     END_KEY,
     DEL_KEY
 };
+
+enum modes {
+    NORMAL = 0,
+    INSERT
+};
+
 typedef struct erow {
     int size;
     int rsize;
@@ -40,6 +46,7 @@ typedef struct erow {
 } erow ;
 
 struct config {
+    int mode;
     int cx;
     int cy;
     int rx;
@@ -333,6 +340,7 @@ void fileSave() {
                 close(fd);
                 free(buf);
                 if (rename(tmpfilename, E.filename) != -1){
+                    free(tmpfilename);
                     setStatusMsg("\"%s\" %dL, %dB written", E.filename, E.numrows, len);
                     E.mod = 0;
                     return;
@@ -348,6 +356,7 @@ void fileSave() {
         close(fd);
     }
     free(buf);
+    free(tmpfilename);
 }
 
 void fileOpen(char* filename) {
@@ -412,7 +421,7 @@ void drawRows(struct abuf *ab) {
 void drawStatusBar(struct abuf *ab) {
     abAppend(ab, "\x1b[1;7m", 6);
     char status[80], rstatus[80];
-    int len = snprintf(status, sizeof(status), "%.20s %s", E.filename ? E.filename : "[No Name]", E.mod ? "[modified]" : "");
+    int len = snprintf(status, sizeof(status), "%s | %.20s %s", E.mode == 0 ? "NORMAL" : "INSERT", E.filename ? E.filename : "[No Name]", E.mod ? "| [modified]" : "");
     int rlen = snprintf(rstatus, sizeof(rstatus), "%d%% | %d:%d", E.numrows != 0 ? 100 * (E.cy + 1) / E.numrows : 0, E.cy + 1, E.cx + 1);
     if (len > E.screencols) len = E.screencols;
     abAppend(ab, status, len);
@@ -497,11 +506,49 @@ char *commandPrompt(char *prompt) {
         }
     }
 }
+void quitEditor(){ 
+    write(STDOUT_FILENO, "\x1b[2J" , 4);
+    write(STDOUT_FILENO, "\x1b[H" , 3);
+    exit(0);
+}
+void editorCommand() {
+    char *command = NULL;
+    command = commandPrompt(":%s");
+    if (command == NULL) {
+        setStatusMsg("Command Aborted");
+        return;
+    }
+    int commandLen = strlen(command);
+    if (commandLen > 2) {
+        setStatusMsg("Invalid Command");
+        return;
+    }
+    switch (command[0]) {
+        case 'w':
+            fileSave();
+            if ((commandLen > 1) && (command[1] == 'q')) quitEditor();
+            break;
+        case 'q':
+            if (E.mod == 0) {
+                quitEditor();
+            } else {
+                if ((commandLen > 1) && (command[1] == '!')) {
+                    quitEditor();
+                } else {
+                    setStatusMsg("You have Unsaved Changes. Type :q! to exit without saving.");
+                }
+            }
+            break;
+        default:
+            setStatusMsg("Invalid Command");
+    }
+}
 void moveCursor(int c) {
     erow *currRow = (E.cy >= E.numrows) ? NULL : &E.row[E.cy];
 
     switch (c) {
         case ARROW_LEFT:
+        case 'h':
             if (E.cx != 0) {
                 E.cx--;
             } else if (E.cy > 0) {
@@ -510,6 +557,7 @@ void moveCursor(int c) {
             }
             break;
         case ARROW_RIGHT:
+        case 'l':
             if (currRow && E.cx <= currRow->size - 1) {
                 E.cx++;
             } else if (currRow && E.cx == currRow->size && E.cy != E.numrows - 1) {
@@ -519,9 +567,11 @@ void moveCursor(int c) {
             break;
     
         case ARROW_UP:
+        case 'k':
             if (E.cy != 0) E.cy--;
             break;
         case ARROW_DOWN:
+        case 'j':
             if (E.cy < E.numrows - 1) E.cy++;
             break;
     }
@@ -533,24 +583,43 @@ void moveCursor(int c) {
 }
 
 void handleKeypress() {
-    static int quit_times = QUIT_TIMES;
     int c = readKeypress();
     switch (c) {
         case CtrlKey('q'):
-            if (E.mod && quit_times > 0) {
-                setStatusMsg("You have unsaved changes. \"Press Ctrl-Q again to quit.\"");
-                quit_times--;
-                return;
-            }
-            write(STDOUT_FILENO, "\x1b[2J" , 4);
-            write(STDOUT_FILENO, "\x1b[H" , 3);
-            exit(0);
             break;
         case ARROW_UP:
         case ARROW_DOWN:
         case ARROW_LEFT:
         case ARROW_RIGHT:
             moveCursor(c);
+            break;
+        case 'h':
+        case 'j':
+        case 'k':
+        case 'l':
+            if (E.mode == NORMAL) {
+                moveCursor(c);
+            } else if (E.mode == INSERT) {
+                insertChar(c);
+            }
+            break;
+        case 'i':
+        case 'a':
+            if (E.mode == NORMAL) {
+                E.mode = INSERT;
+                if ((c == 'a') && (E.cx < E.row[E.cy].size)) {
+                    moveCursor(ARROW_RIGHT);
+                }
+            } else if (E.mode == INSERT) {
+                insertChar(c);
+            }
+            break;
+        case ':':
+            if (E.mode == NORMAL) {
+                editorCommand();
+            } else if (E.mode == INSERT) {
+                insertChar(c);
+            }
             break;
         case PAGE_UP:
         case PAGE_DOWN:
@@ -570,8 +639,21 @@ void handleKeypress() {
             setStatusMsg("%s", E.help);
             break;
         case END_KEY:
-            if (E.cy < E.numrows)
-                E.cx = E.row[E.cy].size;
+            if (E.cy < E.numrows) E.cx = E.row[E.cy].size;
+            break;
+        case '0':
+            if (E.mode == NORMAL) {
+                E.cx = 0;
+            } else if (E.mode == INSERT) {
+                insertChar(c);
+            }
+            break;
+        case '$':
+            if (E.mode == NORMAL) {
+                if (E.cy < E.numrows) E.cx = E.row[E.cy].size;
+            } else if (E.mode == INSERT) {
+                insertChar(c);
+            }
             break;
 
         case DEL_KEY:
@@ -584,19 +666,20 @@ void handleKeypress() {
             delChar();
             break;
         case '\x1b':
+            E.mode = NORMAL;
             break;
         case '\r':
-            insertNewline();
+            if (E.mode == INSERT) insertNewline();
             break;
 
         default:
-            insertChar(c);
+            if (E.mode == INSERT) insertChar(c);
             break;
     }
-    quit_times = QUIT_TIMES;
 }
 
 void init() {
+    E.mode = NORMAL;
     E.cx = 0;
     E.cy = 0;
     E.rx = 0;
