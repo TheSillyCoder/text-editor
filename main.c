@@ -608,8 +608,10 @@ void handleKeypress() {
         case 'a':
             if (E.mode == NORMAL) {
                 E.mode = INSERT;
-                if ((c == 'a') && (E.cx < E.row[E.cy].size)) {
-                    moveCursor(ARROW_RIGHT);
+                if (E.numrows != 0) {
+                    if ((c == 'a') && (E.cx < E.row[E.cy].size)) {
+                        moveCursor(ARROW_RIGHT);
+                    }
                 }
             } else if (E.mode == INSERT) {
                 insertChar(c);
