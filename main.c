@@ -59,6 +59,7 @@ struct config {
     char* filename;
     char* tmpFileExt;
     _Bool mod;
+    _Bool readonly;
     char statusmsg[80];
     char* help;
     time_t statusmsg_time;
@@ -363,7 +364,16 @@ void fileOpen(char* filename) {
     free(E.filename);
     E.filename = strdup(filename);
 
-    FILE *fp = fopen(filename, "r");
+
+    FILE *fp = NULL;
+
+    if (access(E.filename, 'r') == F_OK) {
+        fp = fopen(filename, "r");
+    } else {
+        int fd = open(E.filename, O_RDWR | O_CREAT, 0644);
+        close(fd);
+        fp = fopen(filename, "r");
+    }
     if (!fp) die("fopen");
 
     char *line = NULL;
@@ -519,7 +529,11 @@ void editorCommand() {
         return;
     }
     int commandLen = strlen(command);
-    if (commandLen > 2) {
+    while(command[commandLen - 1] == ' ' || command[commandLen - 1] == '\t') {
+        command[commandLen - 1] = '\0';
+        commandLen--;
+    }
+    if (commandLen > 2 && command[0] != 'o') {
         setStatusMsg("Invalid Command");
         return;
     }
@@ -537,6 +551,21 @@ void editorCommand() {
                 } else {
                     setStatusMsg("You have Unsaved Changes. Type :q! to exit without saving.");
                 }
+            }
+            break;
+        case 'o':
+            if (commandLen >= 3 && command[1] == ' ') {
+                if (E.filename == NULL) {
+                    if (E.numrows == 0) {
+                        fileOpen(&command[2]);
+                    } else if (E.numrows > 0){
+                        setStatusMsg("Unsaved Changes detected");
+                    }
+                } else {
+                    setStatusMsg("Already a file is open");
+                }
+            } else {
+                setStatusMsg("Invalid Command");
             }
             break;
         default:
