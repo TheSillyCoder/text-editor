@@ -485,7 +485,7 @@ char *commandPrompt(char *prompt) {
         updateScreen();
 
         int c = readKeypress();
-        if (c == BACKSPACE) {
+        if (c == BACKSPACE || c == CtrlKey('h')) {
             if (buflen != 0) buf[--buflen] = '\0';
         } else if (c == '\x1b') {
             setStatusMsg("");
@@ -634,7 +634,7 @@ void handleKeypress() {
         case HOME_KEY:
             E.cx = 0;
             break;
-        case CtrlKey('h'):
+        case CtrlKey('a'):
             setStatusMsg("%s", E.help);
             break;
         case END_KEY:
@@ -662,6 +662,7 @@ void handleKeypress() {
                 delChar();
             } 
             break;
+        case CtrlKey('h'):
         case BACKSPACE:
             delChar();
             break;
@@ -711,7 +712,7 @@ void init() {
     E.tmpFileExt = ".ded";
     E.mod = 0;
     E.statusmsg[0] = '\0';
-    E.help = "Help | :q  = quit | :w = save | :wq = save and quit | Ctrl-H = help";
+    E.help = "Help | :q  = quit | :w = save | :wq = save and quit | Ctrl-A = help";
     E.statusmsg_time = 0;
 
     if (getWindowSize(&E.screenrows, &E.screencols) == -1) die("getWindowSize");
