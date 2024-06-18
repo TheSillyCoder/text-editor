@@ -634,10 +634,6 @@ void handleKeypress() {
         case HOME_KEY:
             E.cx = 0;
             break;
-        case CtrlKey('w'):
-        case CtrlKey('s'):
-            fileSave();
-            break;
         case CtrlKey('h'):
             setStatusMsg("%s", E.help);
             break;
@@ -715,7 +711,7 @@ void init() {
     E.tmpFileExt = ".ded";
     E.mod = 0;
     E.statusmsg[0] = '\0';
-    E.help = "HELP: Ctrl-Q = quit | Ctrl-S or Ctrl-W = save | Ctrl-H : Help";
+    E.help = "Help | :q  = quit | :w = save | :wq = save and quit | Ctrl-H = help";
     E.statusmsg_time = 0;
 
     if (getWindowSize(&E.screenrows, &E.screencols) == -1) die("getWindowSize");
