@@ -59,7 +59,6 @@ struct config {
     char* filename;
     char* tmpFileExt;
     _Bool mod;
-    _Bool readonly;
     char statusmsg[80];
     char* help;
     time_t statusmsg_time;
@@ -535,6 +534,7 @@ void editorCommand() {
     }
     if (commandLen > 2 && command[0] != 'o') {
         setStatusMsg("Invalid Command");
+        free(command);
         return;
     }
     switch (command[0]) {
@@ -570,7 +570,9 @@ void editorCommand() {
             break;
         default:
             setStatusMsg("Invalid Command");
+            break;
     }
+    free(command);
 }
 void moveCursor(int c) {
     erow *currRow = (E.cy >= E.numrows) ? NULL : &E.row[E.cy];
