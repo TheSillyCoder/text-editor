@@ -667,8 +667,10 @@ void handleKeypress() {
             delChar();
             break;
         case '\x1b':
-            if (E.cx == E.row[E.cy].size) E.cx--;
             E.mode = NORMAL;
+            if (E.numrows > 0) {
+                if (E.cx == E.row[E.cy].size) E.cx--;
+            }
             break;
         case '\r':
             if (E.mode == INSERT) insertNewline();
