@@ -549,7 +549,7 @@ void moveCursor(int c) {
     switch (c) {
         case ARROW_LEFT:
         case 'h':
-            if (E.cx != 0) {
+            if (E.cx > 0) {
                 E.cx--;
             } else if (E.cy > 0) {
                 E.cy--;
@@ -560,7 +560,7 @@ void moveCursor(int c) {
         case 'l':
             if (currRow && E.cx <= currRow->size - 1) {
                 E.cx++;
-            } else if (currRow && E.cx == currRow->size && E.cy != E.numrows - 1) {
+            } else if (currRow && E.cx == currRow->size && E.mode == INSERT && E.cy != E.numrows - 1) {
                 E.cy++;
                 E.cx = 0;
             }
@@ -580,6 +580,7 @@ void moveCursor(int c) {
     if (E.cx > currRowLen) {
         E.cx = currRowLen;
     }
+    if (E.mode == NORMAL && E.cx == currRowLen) E.cx--;
 }
 
 void handleKeypress() {
@@ -640,6 +641,7 @@ void handleKeypress() {
             break;
         case END_KEY:
             if (E.cy < E.numrows) E.cx = E.row[E.cy].size;
+            if (E.mode == NORMAL) E.cx--;
             break;
         case '0':
             if (E.mode == NORMAL) {
@@ -650,7 +652,7 @@ void handleKeypress() {
             break;
         case '$':
             if (E.mode == NORMAL) {
-                if (E.cy < E.numrows) E.cx = E.row[E.cy].size;
+                if (E.cy < E.numrows) E.cx = E.row[E.cy].size - 1;
             } else if (E.mode == INSERT) {
                 insertChar(c);
             }
@@ -666,10 +668,30 @@ void handleKeypress() {
             delChar();
             break;
         case '\x1b':
+            if (E.cx == E.row[E.cy].size) E.cx--;
             E.mode = NORMAL;
             break;
         case '\r':
             if (E.mode == INSERT) insertNewline();
+            break;
+        case 'o':
+            if (E.mode == NORMAL) {
+                E.mode = INSERT;
+                E.cx = E.row[E.cy].size;
+                insertNewline();
+                E.cx = 0;
+            } else if (E.mode == INSERT) {
+                insertChar(c);
+            }
+            break;
+        case 'O':
+            if (E.mode == NORMAL) {
+                E.mode = INSERT;
+                insertRow(E.cy, "", 0);
+                E.cx = 0;
+            } else if (E.mode == INSERT) {
+                insertChar(c);
+            }
             break;
 
         default:
