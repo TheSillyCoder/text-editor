@@ -16,11 +16,11 @@
 #define CtrlKey(k) (k & 31)
 #define TAB_STOP 4
 #define MSG_TIME 5
-#define QUIT_TIMES 1
 
 #define ABUF_INIT {NULL, 0}
 
 enum cursorKeys {
+    TAB_KEY = 9,
     BACKSPACE = 127,
     ARROW_LEFT = 1000,
     ARROW_RIGHT,
@@ -694,7 +694,7 @@ void handleKeypress() {
             break;
 
         default:
-            if (E.mode == INSERT) insertChar(c);
+            if ((E.mode == INSERT) && !(iscntrl(c) && c != TAB_KEY)) insertChar(c);
             break;
     }
 }
