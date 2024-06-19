@@ -72,6 +72,7 @@ struct abuf {
 
 void setStatusMsg(const char *fmt, ...); 
 char *commandPrompt(char *);
+void disableRawMode();
 
 void abAppend(struct abuf *ab, char *s, int len) {
     char *new = realloc(ab->b, ab->len + len);
@@ -91,6 +92,7 @@ struct config E;
 void die(const char *s) {
     write(STDOUT_FILENO, "\x1b[2J" , 4);
     write(STDOUT_FILENO, "\x1b[H" , 3);
+    disableRawMode();
     perror(s);
     exit(1);
 }
@@ -688,14 +690,22 @@ void handleKeypress() {
             break;
 
         case DEL_KEY:
-            if (E.cx < E.row[E.cx].size || E.cy < E.numrows - 1) {
+            if ((E.cx < E.row[E.cx].size || E.cy < E.numrows - 1) && E.mode == INSERT) {
                 moveCursor(ARROW_RIGHT);
                 delChar();
             } 
             break;
         case CtrlKey('h'):
         case BACKSPACE:
-            delChar();
+            if (E.mode == INSERT) delChar();
+            break;
+        case 'x':
+            if (E.mode == NORMAL && E.row[E.cy].size > 0) {
+                E.cx++;
+                delChar();
+            } else if (E.mode == INSERT) {
+                insertChar(c);
+            }
             break;
         case '\x1b':
             E.mode = NORMAL;
