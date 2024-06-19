@@ -73,6 +73,7 @@ struct abuf {
 void setStatusMsg(const char *fmt, ...); 
 char *commandPrompt(char *);
 void disableRawMode();
+void freeEditor();
 
 void abAppend(struct abuf *ab, char *s, int len) {
     char *new = realloc(ab->b, ab->len + len);
@@ -92,6 +93,7 @@ struct config E;
 void die(const char *s) {
     write(STDOUT_FILENO, "\x1b[2J" , 4);
     write(STDOUT_FILENO, "\x1b[H" , 3);
+    freeEditor();
     disableRawMode();
     perror(s);
     exit(1);
@@ -365,15 +367,14 @@ void fileOpen(char* filename) {
     free(E.filename);
     E.filename = strdup(filename);
 
-
     FILE *fp = NULL;
 
     if (access(E.filename, 'r') == F_OK) {
-        fp = fopen(filename, "r");
+        fp = fopen(E.filename, "r");
     } else {
         int fd = open(E.filename, O_RDWR | O_CREAT, 0644);
         close(fd);
-        fp = fopen(filename, "r");
+        fp = fopen(E.filename, "r");
     }
     if (!fp) die("fopen");
 
@@ -390,7 +391,6 @@ void fileOpen(char* filename) {
     fclose(fp);
 
     E.mod = 0;
-
 }
 
 void scroll() {
@@ -517,9 +517,20 @@ char *commandPrompt(char *prompt) {
         }
     }
 }
+void freeEditor() {
+    free(E.filename);
+    free(E.help);
+    /* free(E.statusmsg); */
+    free(E.tmpFileExt);
+    for (int  i = 0; i < E.numrows; ++i) {
+        freeRow(&E.row[i]);
+    }
+    free(E.row);
+}
 void quitEditor(){ 
     write(STDOUT_FILENO, "\x1b[2J" , 4);
     write(STDOUT_FILENO, "\x1b[H" , 3);
+    freeEditor();
     exit(0);
 }
 void editorCommand() {
@@ -542,13 +553,18 @@ void editorCommand() {
     switch (command[0]) {
         case 'w':
             fileSave();
-            if ((commandLen > 1) && (command[1] == 'q')) quitEditor();
+            if ((commandLen > 1) && (command[1] == 'q')) {
+                free(command);
+                quitEditor();
+            }
             break;
         case 'q':
             if (E.mod == 0) {
+                free(command);
                 quitEditor();
             } else {
                 if ((commandLen > 1) && (command[1] == '!')) {
+                    free(command);
                     quitEditor();
                 } else {
                     setStatusMsg("You have Unsaved Changes. Type :q! to exit without saving.");
