@@ -181,7 +181,7 @@ void updateRow(erow *row) {
         if (row->chars[i] == '\t') tabs++;
     }
     free(row->render);
-    row->render = malloc(row->size + tabs*(TAB_STOP - 1) + 1);
+    row->render = (char*) malloc(row->size + tabs*(TAB_STOP - 1) + 1);
 
     int idx = 0;
     for (int i = 0; i < row->size; ++i) {
@@ -202,7 +202,7 @@ void insertRow(int idx, char *s, size_t len) {
     E.row = realloc(E.row, sizeof(erow) * (E.numrows + 1));
     memmove(&E.row[idx + 1], &E.row[idx], sizeof(erow) * (E.numrows - idx));
     E.row[idx].size = len;
-    E.row[idx].chars = malloc(len + 1);
+    E.row[idx].chars = (char*) malloc(len + 1);
     memcpy(E.row[idx].chars, s, len);
     E.row[idx].chars[len] = '\0';
     E.row[idx].rsize = 0;
@@ -306,7 +306,7 @@ char *rowsToString(int *len) {
         tmplen += E.row[i].size + 1;
     }
     *len = tmplen;
-    char *s = malloc(tmplen);
+    char *s = (char*) malloc(tmplen);
     char *p = s;
     for (int i = 0; i < E.numrows; ++i) {
         memcpy(p, E.row[i].chars, E.row[i].size);
@@ -330,7 +330,7 @@ void fileSave() {
     int filenameLen = strlen(E.filename);
     int tmpExtLen = strlen(E.tmpFileExt);
     int tmpFilenameLen = filenameLen + tmpExtLen + 1;
-    char* tmpfilename = malloc(tmpFilenameLen);
+    char* tmpfilename = (char*) malloc(tmpFilenameLen);
     memcpy(tmpfilename, E.filename, filenameLen);
     memcpy(&tmpfilename[filenameLen], E.tmpFileExt, tmpExtLen);
     tmpfilename[tmpFilenameLen] = '\0';
@@ -486,7 +486,7 @@ void updateScreen() {
 
 char *commandPrompt(char *prompt) {
     size_t bufsize = 128;
-    char *buf = malloc(bufsize);
+    char *buf = (char*) malloc(bufsize);
 
     size_t buflen = 0;
     buf[0] = '\0';
