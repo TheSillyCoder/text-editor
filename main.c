@@ -364,7 +364,7 @@ void fileSave() {
 }
 
 void fileOpen(char* filename) {
-    free(E.filename);
+    /* free(E.filename); */
     E.filename = strdup(filename);
 
     FILE *fp = NULL;
@@ -520,8 +520,6 @@ char *commandPrompt(char *prompt) {
 void freeEditor() {
     free(E.filename);
     free(E.help);
-    /* free(E.statusmsg); */
-    free(E.tmpFileExt);
     for (int  i = 0; i < E.numrows; ++i) {
         freeRow(&E.row[i]);
     }
@@ -771,7 +769,8 @@ void init() {
     E.tmpFileExt = ".ded";
     E.mod = 0;
     E.statusmsg[0] = '\0';
-    E.help = "Help | :q  = quit | :w = save | :wq = save and quit | Ctrl-A = help";
+    E.help = (char *) malloc(68);
+    snprintf(E.help, 68, "Help | :q  = quit | :w = save | :wq = save and quit | Ctrl-A = help");
     E.statusmsg_time = 0;
 
     if (getWindowSize(&E.screenrows, &E.screencols) == -1) die("getWindowSize");
