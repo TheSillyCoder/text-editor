@@ -733,8 +733,8 @@ void handleKeypress() {
         case 'o':
             if (E.mode == NORMAL) {
                 E.mode = INSERT;
-                E.cx = E.row[E.cy].size;
-                insertNewline();
+                insertRow(E.cy, "", 0);
+                E.cy++;
                 E.cx = 0;
             } else if (E.mode == INSERT) {
                 insertChar(c);
